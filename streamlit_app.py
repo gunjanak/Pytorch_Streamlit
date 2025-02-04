@@ -16,15 +16,15 @@ import os
 
 from dataframe_nepse import stock_dataFrame
 # from forecast import forecast_closing_price
-from forecast_bgru import train_gru_model,test_gru_model
-from helper import normalize_with_sklearn,denormalize_with_sklearn
+
+from basic import read_prepare_data, train_and_test,just_test
 
 
 st.set_page_config(layout="wide")
 
 st.write("Hello")
 # Input from the user
-user_input = st.text_input("Enter a word:")
+user_input = st.text_input("Enter a symbol:")
 # Date input from the user
 selected_date = st.date_input(
     "Select a date:",
@@ -33,7 +33,8 @@ selected_date = st.date_input(
 
 
 # Display the entered word
-if user_input and selected_date:
+if st.button("Submit"):
+    print("submit clicked")
     st.write("You entered:", user_input)
     st.write("Date :",selected_date)
     try:
@@ -176,92 +177,24 @@ if user_input and selected_date:
     
     
     try:
-        n_days = 5
-        if 'RSI' not in df.columns:
-            df["RSI"] = ta.rsi(df["Close"], length=14)
-        df = df[['Close','RSI']]
-        # Remove duplicate indices, if any
-        # df = df[~df.index.duplicated(keep='first')]
-        df = df.dropna()
-        print(df)
-        # st.write(df.tail())
-        
-        # Check if the model file exists and load it
-        model_path = "price_forecaster_gru.pth"
-        # if os.path.exists(model_path):
-        #     model = PriceForecasterGRU(input_size=2)
-        #     model.load_state_dict(torch.load(model_path))
-        #     model.eval()  # Set the model to evaluation mode
-        #     print(f"Model loaded successfully from '{model_path}'")
-        # else:
-        #     print(f"No model found at '{model_path}'")
-    
-        # Normalize the 'Close' and 'RSI' columns
-        # Normalize the 'Close' and 'RSI' columns
-        columns_to_normalize = ['Close', 'RSI']
-        train_size = 0.8
-        split_index = int(len(df) * train_size)
-        df_train = df[:split_index]
-        df_test = df[split_index:]
-        
-        
-        df_train_normalized, scaler_train = normalize_with_sklearn(df_train, columns_to_normalize)
-        df_test_normalized, scaler_test = normalize_with_sklearn(df_test, columns_to_normalize)
-        
-
-        model, mape = train_gru_model(df_train_normalized, n_days,epochs=5000)
-        print(len(df_train_normalized))
-        
-        predictions,test_mape = test_gru_model(model,df_test_normalized,n_days)
-        print(len(predictions))
-        print(predictions)
-        
-        # Re-transform predictions to original scale
-        # Denormalize predictions to original scale (for 'Close' column only)
-        predictions_original_scale = denormalize_with_sklearn(predictions,scaler_test, column_index=0)
-
-        print(f"Testing MAPE (Original Scale): {test_mape:.2f}%")
-        
-        print("predictions_original_scale")
-        print(predictions_original_scale)
-        # # # Save the trained model
-        
-        torch.save(model.state_dict(), model_path)
-        print(f"Model saved to {model_path}")
-        # # # # Convert predictions to a Pandas Series with the appropriate index
-        predictions_series = pd.Series(predictions_original_scale, index=df_test.index[n_days:])
-        print(predictions_series)
-        print(df_test)
-        
-        # # # Rename the series to a meaningful column name, e.g., 'Predicted Value'
-        predictions_series = predictions_series.rename('Predicted Value')
-
-        # # # Merge the series with the DataFrame on the index
-        merged_df = df_test.merge(predictions_series, left_index=True, right_index=True, how='left')
-
-        # # print(merged_df)
-        df_test = merged_df.dropna()
-
-        
-
-        # # # # Print the last few rows to verify
-        print(df_test.tail())
-        # Remove the RSI column
-        # df_test = df.drop(columns=["RSI"])
-        
-        print(f"Train ERROR: {mape}, Test ERROR:{test_mape}")
-
+        df,model_path = read_prepare_data(user_input=user_input)
+        test_mape = just_test(df,model_path=model_path)
+        st.write(f"Test ERROR:{test_mape}")
+        while test_mape > 100:
+            model_path = f"{user_input}_price_forecaster_gru_l2_four_layers.pth"
+            mape,test_mape = train_and_test(df,model_path=model_path)
+            st.write(f"Train ERROR: {mape}, Test ERROR:{test_mape}")
         # Streamlit app
-        st.title("Stock Data Visualization")
+        # st.title("Stock Data Visualization")
         # print(df_test.tail())
 
-        # Plotting the data
-        fig = px.line(df_test, x=df_test.index, y=["Close", "Predicted Value"], markers=True,
-                    labels={"value": "Price", "variable": "Type"},
-                    title="Close and Predicted Value Over Time")
+        # # Plotting the data
+        # fig = px.line(df_test, x=df_test.index, y=["Close", "Predicted Value"], markers=True,
+        #             labels={"value": "Price", "variable": "Type"},
+        #             title="Close and Predicted Value Over Time")
 
-        # Display the plot
-        st.plotly_chart(fig)
+        # # Display the plot
+        # st.plotly_chart(fig)
     except Exception as e:
         print(e)
         
