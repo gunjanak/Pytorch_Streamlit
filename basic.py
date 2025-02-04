@@ -15,7 +15,7 @@ import os
 
 from dataframe_nepse import stock_dataFrame
 # from forecast import forecast_closing_price
-from forecast_bgru import train_gru_model,test_gru_model
+from forecast_bgru import train_gru_model,test_gru_model,PriceForecasterGRU
 from helper import normalize_with_sklearn,denormalize_with_sklearn
 
 def read_prepare_data(user_input,selected_date = "2020-01-01"):
@@ -33,13 +33,13 @@ def read_prepare_data(user_input,selected_date = "2020-01-01"):
 
     df = df.dropna()
     # check if the model for particular symbol exist
-    model_path = f"{user_input}_price_forecaster_gru.pth"
+    model_path = f"{user_input}_price_forecaster_gru_l2_four_layers.pth"
     print(model_path)
     if os.path.exists(model_path):
         print("File exists")
     else:
         print("File does not exist")
-        model_path = "price_forecaster_gru.pth"
+        model_path = "price_forecaster_gru_l2_four_layers.pth"
         
     
     print(df.head())
@@ -118,22 +118,74 @@ def train_and_test(df,model_path):
     return mape,test_mape
 
 
+def just_test(df,model_path):
+    model = PriceForecasterGRU(input_size=2, hidden_size=64,
+                               output_size=1, num_layers=2,
+                               dropout=0.3)
+    try:
+        model.load_state_dict(torch.load(model_path))
+        print("Model successfully loaded")
+    except Exception as e:
+        print(f"Exception occured: {e}")
+        
+        
+    train_size = 0.8
+    split_index = int(len(df) * train_size)
+    df_train = df[:split_index]
+    df_test = df[split_index:]
+
+
+    #Normalize
+    columns_to_normalize = ['Close', 'RSI']
+    df_train_normalized, scaler_train = normalize_with_sklearn(df_train, 
+                                                               columns_to_normalize)
+    df_test_normalized, scaler_test = normalize_with_sklearn(df_test,
+                                                             columns_to_normalize)
+
+    
+    #Train
+    n_days = 5
+    predictions,test_mape = test_gru_model(model,df_test_normalized,n_days)
+    predictions_original_scale = denormalize_with_sklearn(predictions,scaler_test, column_index=0)
+    print(f"Testing MAPE (Original Scale): {test_mape:.2f}%")
+    predictions_series = pd.Series(predictions_original_scale, index=df_test.index[n_days:])
+    predictions_series = predictions_series.rename('Predicted Value')
+
+    # # # Merge the series with the DataFrame on the index
+    merged_df = df_test.merge(predictions_series, left_index=True,
+                            right_index=True, how='left')
+
+    # # print(merged_df)
+    df_test = merged_df.dropna()
+
+
+
+    # # # # Print the last few rows to verify
+    print(df_test.tail())
+    
+    return test_mape
+    
+
+        
+    
+    
+
 #read the data from api
 #symbol = "ADBL","NTC","JOSHI","KBL","MMKJL","NICA","PHCL",
 # "OHL","SCBD","SHLB","SINDU","UNL","WNLB"
-user_input = "ANLB"
-# selected_date = "2020-01-01"
+# user_input = "ANLB"
+# # selected_date = "2020-01-01"
 
 
-df,model_path = read_prepare_data(user_input=user_input)
-mape,test_mape = train_and_test(df,model_path=model_path)
-print(f"Train ERROR: {mape}, Test ERROR:{test_mape}")
+# df,model_path = read_prepare_data(user_input=user_input)
+# mape,test_mape = train_and_test(df,model_path=model_path)
+# print(f"Train ERROR: {mape}, Test ERROR:{test_mape}")
 
-#retrain the model if test_mape is greater than 100
-while test_mape>100:
-    model_path = f"{user_input}_price_forecaster_gru.pth"
-    mape,test_mape = train_and_test(df,model_path=model_path)
-    print(f"Train ERROR: {mape}, Test ERROR:{test_mape}")
+# #retrain the model if test_mape is greater than 100
+# while test_mape>100:
+#     model_path = f"{user_input}_price_forecaster_gru_l2_four_layers.pth"
+#     mape,test_mape = train_and_test(df,model_path=model_path)
+#     print(f"Train ERROR: {mape}, Test ERROR:{test_mape}")
     
     
     
