@@ -7,19 +7,47 @@ import pandas as pd
 from dataframe_nepse import stock_dataFrame
 
 # Define a PyTorch model with Bidirectional GRU
+# class PriceForecasterGRU(nn.Module):
+#     def __init__(self, input_size, hidden_size, output_size, num_layers=1):
+#         super(PriceForecasterGRU, self).__init__()
+#         self.hidden_size = hidden_size
+#         self.num_layers = num_layers
+#         self.gru = nn.GRU(input_size, hidden_size, num_layers, batch_first=True, bidirectional=True)
+#         self.fc = nn.Linear(hidden_size * 2, output_size)  # Multiply by 2 for bidirectional
+
+#     def forward(self, x):
+#         h0 = torch.zeros(self.num_layers * 2, x.size(0), self.hidden_size).to(x.device)  # Initialize hidden state
+#         out, _ = self.gru(x, h0)
+#         out = self.fc(out[:, -1, :])  # Use the last time step
+#         return out
+
+import torch
+import torch.nn as nn
+import torch.optim as optim
+
 class PriceForecasterGRU(nn.Module):
-    def __init__(self, input_size, hidden_size, output_size, num_layers=1):
+    def __init__(self, input_size, hidden_size, output_size, num_layers=1, dropout=0.3):
         super(PriceForecasterGRU, self).__init__()
         self.hidden_size = hidden_size
         self.num_layers = num_layers
-        self.gru = nn.GRU(input_size, hidden_size, num_layers, batch_first=True, bidirectional=True)
+        self.gru = nn.GRU(
+            input_size, 
+            hidden_size, 
+            num_layers, 
+            batch_first=True, 
+            bidirectional=True, 
+            dropout=dropout if num_layers > 1 else 0  # Dropout is ignored for a single layer
+        )
+        self.dropout = nn.Dropout(dropout)  # Dropout before the fully connected layer
         self.fc = nn.Linear(hidden_size * 2, output_size)  # Multiply by 2 for bidirectional
 
     def forward(self, x):
         h0 = torch.zeros(self.num_layers * 2, x.size(0), self.hidden_size).to(x.device)  # Initialize hidden state
         out, _ = self.gru(x, h0)
-        out = self.fc(out[:, -1, :])  # Use the last time step
+        out = self.dropout(out[:, -1, :])  # Apply dropout before the fully connected layer
+        out = self.fc(out)
         return out
+
 
 # Function to prepare the dataset for sequence input
 def prepare_data(df, n_days):
@@ -32,7 +60,7 @@ def prepare_data(df, n_days):
     return np.array(X), np.array(y)
 
 # Function to train the model
-def train_gru_model(df, n_days, epochs=500, hidden_size=64, num_layers=1):
+def train_gru_model(df, n_days,model_path,epochs=500, hidden_size=64, num_layers=1):
     """
     Train a GRU model to forecast closing prices.
 
@@ -57,9 +85,24 @@ def train_gru_model(df, n_days, epochs=500, hidden_size=64, num_layers=1):
 
     # Define model, loss function, and optimizer
     input_size = 2  # Two features: 'Close' and 'RSI'
-    model = PriceForecasterGRU(input_size=input_size, hidden_size=hidden_size, output_size=1, num_layers=num_layers)
+    
+    # model = PriceForecasterGRU(input_size=input_size, hidden_size=hidden_size, output_size=1, num_layers=num_layers)
+    model = PriceForecasterGRU(input_size=input_size, hidden_size=64,
+                               output_size=1, num_layers=2,
+                               dropout=0.3)
+    try:
+        model.load_state_dict(torch.load(model_path))
+        print("Model successfully loaded")
+    except Exception as e:
+        print(f"Exception occured: {e}")
+        
+    
     criterion = nn.MSELoss()
-    optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
+    
+    
+    optimizer = optim.Adam(model.parameters(),
+                           lr=0.001, weight_decay=1e-4)  # L2 Regularization (weight decay)
+
 
     # Train the model
     for epoch in range(epochs):
