@@ -44,7 +44,7 @@ tail_type = st.selectbox("Select Tail Type", ("Left-Tailed", "Right-Tailed", "Tw
 
 
 # Input fields based on test type
-if selected_test == "Z-Test":
+if selected_test == "Z-test":
     pop_mean = st.number_input("Population Mean", value=0.0)
     pop_std = st.number_input("Population Standard Deviation", value=1.0)
     sample_mean = st.number_input("Sample Mean", value=0.0)
@@ -55,7 +55,7 @@ if selected_test == "Z-Test":
         st.write(f"Z-Score: {z_score:.4f}")
         st.write(f"P-Value: {p_value:.4f}")
 
-elif selected_test == "T-Test":
+elif selected_test == "T-test":
     pop_mean = st.number_input("Population Mean", value=0.0)
     sample_mean = st.number_input("Sample Mean", value=0.0)
     sample_std = st.number_input("Sample Standard Deviation", value=1.0)
