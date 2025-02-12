@@ -6,25 +6,6 @@ import pandas as pd
 
 from dataframe_nepse import stock_dataFrame
 
-# Define a PyTorch model with Bidirectional GRU
-# class PriceForecasterGRU(nn.Module):
-#     def __init__(self, input_size, hidden_size, output_size, num_layers=1):
-#         super(PriceForecasterGRU, self).__init__()
-#         self.hidden_size = hidden_size
-#         self.num_layers = num_layers
-#         self.gru = nn.GRU(input_size, hidden_size, num_layers, batch_first=True, bidirectional=True)
-#         self.fc = nn.Linear(hidden_size * 2, output_size)  # Multiply by 2 for bidirectional
-
-#     def forward(self, x):
-#         h0 = torch.zeros(self.num_layers * 2, x.size(0), self.hidden_size).to(x.device)  # Initialize hidden state
-#         out, _ = self.gru(x, h0)
-#         out = self.fc(out[:, -1, :])  # Use the last time step
-#         return out
-
-import torch
-import torch.nn as nn
-import torch.optim as optim
-
 class PriceForecasterGRU(nn.Module):
     def __init__(self, input_size, hidden_size, output_size, num_layers=4, dropout=0.3):
         super(PriceForecasterGRU, self).__init__()
