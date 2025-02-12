@@ -50,7 +50,7 @@ def forward_selection(X,y,significance_level=0.05):
 
 st.title("Bank data analysis")
 #Read the data
-df = pd.read_csv("pages/financial_data.csv")
+df = pd.read_csv("financial_data.csv")
 
 #set date as index
 df.set_index("Date",inplace=True)
