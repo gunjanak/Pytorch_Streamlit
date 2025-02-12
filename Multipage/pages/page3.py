@@ -35,7 +35,7 @@ if selected_test == 'Z-test':
     if st.button("Perform Z-test"):
         z_score,p_value = z_test(pop_mean,pop_std,sample_mean,sample_size)
         st.write(f"Z-Score: {z_score:.4f}")
-        st.write(f"P-Value: "{p_value:.4f})
+        st.write(f"P-Value: {p_value:.4f}")
         
 elif selected_test == "T-test":
     pop_mean = st.number_input("Population Mean", value=0.0)
