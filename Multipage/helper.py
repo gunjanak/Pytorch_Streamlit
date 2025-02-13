@@ -155,29 +155,24 @@ def train_and_test(df,model_path):
     print("Merged dataframe")
     print(df_test)
     
+    last_5_days = df_test_normalized[['Close', 'RSI']].tail(5).values  # Extract last 5 days as input
+    last_5_days_tensor = torch.tensor(last_5_days, dtype=torch.float32).unsqueeze(0)  # Add batch dim
+    with torch.no_grad():
+        predicted_tomorrow_price = model(last_5_days_tensor).item()  # Get prediction
+        print(predicted_tomorrow_price)
+        print(type(predicted_tomorrow_price))
+
+    predicted_tomorrow_price = np.array(predicted_tomorrow_price)
+    # # Denormalize the predicted price
+    predicted_tomorrow_price_original = denormalize_with_sklearn(predicted_tomorrow_price, scaler_test, column_index=0)[0]
     
-    # last_5_days = df_test_normalized[['Close', 'RSI']].tail(20)  # Extract last 5 days as input
-    # # last_5_days_tensor = torch.tensor(last_5_days, dtype=torch.float32).unsqueeze(0)  # Add batch dim
-    # with torch.no_grad():
-    #     predicted_tomorrow_price = test_gru_model(model,last_5_days,n_days)  # Get prediction
-    #     print("Tomorrow price")
-    #     print(predicted_tomorrow_price)
-        
+    print(predicted_tomorrow_price_original)
 
-
-    # # # # Denormalize the predicted price
-    # predicted_tomorrow_price_original = denormalize_with_sklearn([predicted_tomorrow_price], scaler_test, column_index=0)[0]
-
-    # print(f"Predicted Tomorrow’s Price: {predicted_tomorrow_price_original:.2f}")
-
-
-    # # # # # # Print the last few rows to verify
-    # # print(df_test.tail())
 
 
     
     
-    return mape,test_mape
+    return mape,test_mape,df_test,predicted_tomorrow_price_original
 
 
 def just_test(df,model_path):
