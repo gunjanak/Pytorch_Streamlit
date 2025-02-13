@@ -8,12 +8,17 @@ st.title("Stock Price Forecast App ")
 
 # Text input
 user_input = st.text_input("Enter some text:")
+weekly = st.checkbox("Do you need weekly prediction?")
+print(weekly)
 
 # Display the input
 df = pd.DataFrame({})
 try:
     if st.button("Get the data"):
-        df = stock_dataFrame(stock_symbol=user_input)
+        if weekly:
+            df = stock_dataFrame(stock_symbol=user_input,weekly=True)
+        else:
+            df = stock_dataFrame(stock_symbol=user_input)
 except Exception as e:
     st.write(e)
     
