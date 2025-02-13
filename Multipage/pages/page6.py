@@ -4,7 +4,7 @@ from stock import stock_dataFrame
 from helper import prepare_data,just_test,train_and_test
 
 # Title of the app
-st.title("Stock Price Forecast App ")
+st.title("Stock Price Forecast Appplication ")
 
 # Text input
 user_input = st.text_input("Enter some text:")
