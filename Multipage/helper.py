@@ -112,7 +112,7 @@ def train_and_test(df,model_path):
 
 
     model, mape = train_gru_model(df_train_normalized, n_days,model_path=model_path,
-                                epochs=5000)
+                                epochs=50)
     print(len(df_train_normalized))
 
 
