@@ -21,4 +21,4 @@ try:
     print(model.eval())
     st.write(model.eval())
 except Exception as e:
-    print(e)
+    st.write(e)
