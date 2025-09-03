@@ -60,6 +60,6 @@ class enhance_net_nopool(nn.Module):
 def load_model(path=None):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = enhance_net_nopool().to(device=device)
-    model.load_state_dict(torch.load('Epoch100_Iter100.pth'))
+    model.load_state_dict(torch.load('zero_dce.pth'))
     print(model.eval())
     return model
