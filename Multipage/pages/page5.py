@@ -1,4 +1,6 @@
 import streamlit as st
+import torch
+from enhance_net import enhance_net_nopool,load_model
 
 st.title("Low Ligth Image Enhancement with Zero-DCE")
 
@@ -13,3 +15,10 @@ if uploaded_file is not None:
     st.write("Filename:", uploaded_file.name)
     st.write("File type:", uploaded_file.type)
     st.write("File size:", uploaded_file.size, "bytes")
+    
+try:
+    model = load_model()
+    print(model.eval())
+    st.write(model.eval())
+except Exception as e:
+    print(e)
