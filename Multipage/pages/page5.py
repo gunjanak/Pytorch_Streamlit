@@ -1,10 +1,18 @@
 import streamlit as st
-import pandas as pd
-import numpy as np
-import seaborn as sns
-import matplotlib.pyplot as plt
-import plotly.express as px
-import plotly.figure_factory as ff
-from scipy.stats import norm,t
+from PIL import Image
 
-st.title("Image enhancement with Zero-DCE")
+st.title("Zero-DCE")
+
+# File uploader
+uploaded_file = st.file_uploader("Choose an image...", type=["jpg", "jpeg", "png"])
+
+if uploaded_file is not None:
+    # Open the image
+    image = Image.open(uploaded_file)
+
+    # Display the image
+    st.image(image, caption="Uploaded Image", use_column_width=True)
+
+    # Show basic info
+    st.write("Image format:", image.format)
+    st.write("Image size:", image.size)
