@@ -5,7 +5,7 @@ from PIL import Image
 from torchvision import transforms
 from enhance_net import enhance_net_nopool, load_model
 
-st.title("✨ Low Light Image Enhancement with Zero-DCE")
+st.title(" Low Light Image Enhancement with Zero-DCE")
 
 # -----------------------
 # Helper function
