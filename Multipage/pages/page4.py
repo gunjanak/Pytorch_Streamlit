@@ -9,15 +9,20 @@ st.title("Background Removal using U2-Net")
 # -----------------------
 # Streamlit UI
 # -----------------------
+
+try:
+    model = load_model()
+    st.write("Model Loaded successfully")
+except Exception as e:
+    print(e)
+    st.write(e)
+    
+    
+    
 uploaded_file = st.file_uploader("Choose an image...", type=["jpg", "jpeg", "png"])
 
 if uploaded_file is not None:
     try:
-        # Load model
-        
-        model = load_model()
-        st.write("Model Loaded successfully")
-
         # # Enhance
         original_np, enhanced_np = extract_foreground(uploaded_file, model)
 
