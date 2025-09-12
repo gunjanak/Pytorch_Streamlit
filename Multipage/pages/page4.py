@@ -3,7 +3,7 @@ from u2net import load_model,extract_foreground
 
 
 st.title("Background Removal using U2-Net")
-print(".")
+print("..")
 
 
 
