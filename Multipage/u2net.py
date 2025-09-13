@@ -692,3 +692,4 @@ def load_model(path="best_u2net_medium.pth"):
 #     model.eval()
 #     print("Model loaded successfully")
 #     return model
+# 
