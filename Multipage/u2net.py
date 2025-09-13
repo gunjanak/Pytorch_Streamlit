@@ -560,11 +560,135 @@ class U2NETP(nn.Module):
 
         return F.sigmoid(d0), F.sigmoid(d1), F.sigmoid(d2), F.sigmoid(d3), F.sigmoid(d4), F.sigmoid(d5), F.sigmoid(d6)
     
-def load_model(path="best_u2net_small.pth"):
+
+class U2NETSM(nn.Module):
+    """
+    Slightly smaller than U2NETM, but larger than U2NETP.
+    Encoder outputs chosen: s1=56, s2=80, s3=112, s4=168, s5=168, s6=168
+    Mid-channel choices scaled proportionally: 18/18/36/48/72/72
+    """
+    def __init__(self, in_ch=3, out_ch=1):
+        super(U2NETSM, self).__init__()
+
+        # encoder outputs (a little smaller than U2NETM)
+        s1_out = 56
+        s2_out = 80
+        s3_out = 112
+        s4_out = 168
+        s5_out = 168
+        s6_out = 168
+
+        # encoder (mid channels scaled down from U2NETM)
+        self.stage1 = RSU7(in_ch, 18, s1_out)
+        self.pool12 = nn.MaxPool2d(2, stride=2, ceil_mode=True)
+
+        self.stage2 = RSU6(s1_out, 18, s2_out)
+        self.pool23 = nn.MaxPool2d(2, stride=2, ceil_mode=True)
+
+        self.stage3 = RSU5(s2_out, 36, s3_out)
+        self.pool34 = nn.MaxPool2d(2, stride=2, ceil_mode=True)
+
+        self.stage4 = RSU4(s3_out, 48, s4_out)
+        self.pool45 = nn.MaxPool2d(2, stride=2, ceil_mode=True)
+
+        self.stage5 = RSU4F(s4_out, 72, s5_out)
+        self.pool56 = nn.MaxPool2d(2, stride=2, ceil_mode=True)
+
+        self.stage6 = RSU4F(s5_out, 72, s6_out)
+
+        # decoder (inputs are concatenations: deeper_up + skip)
+        self.stage5d = RSU4F(s5_out + s6_out, 72, s5_out)   # 168 + 168 = 336 in
+        self.stage4d = RSU4(s4_out + s5_out, 48, s4_out)    # 168 + 168 = 336 in
+        self.stage3d = RSU5(s3_out + s4_out, 36, s3_out)    # 112 + 168 = 280 in
+        self.stage2d = RSU6(s2_out + s3_out, 18, s2_out)    # 80 + 112  = 192 in
+        self.stage1d = RSU7(s1_out + s2_out, 18, s1_out)    # 56 + 80   = 136 in
+
+        # side outputs
+        self.side1 = nn.Conv2d(s1_out, out_ch, 3, padding=1)
+        self.side2 = nn.Conv2d(s2_out, out_ch, 3, padding=1)
+        self.side3 = nn.Conv2d(s3_out, out_ch, 3, padding=1)
+        self.side4 = nn.Conv2d(s4_out, out_ch, 3, padding=1)
+        self.side5 = nn.Conv2d(s5_out, out_ch, 3, padding=1)
+        self.side6 = nn.Conv2d(s6_out, out_ch, 3, padding=1)
+
+        self.outconv = nn.Conv2d(6 * out_ch, out_ch, 1)
+
+    def forward(self, x):
+        hx = x
+
+        # encoder
+        hx1 = self.stage1(hx)              # s1_out
+        hx = self.pool12(hx1)
+
+        hx2 = self.stage2(hx)              # s2_out
+        hx = self.pool23(hx2)
+
+        hx3 = self.stage3(hx)              # s3_out
+        hx = self.pool34(hx3)
+
+        hx4 = self.stage4(hx)              # s4_out
+        hx = self.pool45(hx4)
+
+        hx5 = self.stage5(hx)              # s5_out
+        hx = self.pool56(hx5)
+
+        hx6 = self.stage6(hx)              # s6_out
+
+        # decoder (always upsample deeper -> concat with skip)
+        hx6up = _upsample_like(hx6, hx5)
+        hx5d = self.stage5d(torch.cat((hx6up, hx5), 1))
+        hx5dup = _upsample_like(hx5d, hx4)
+
+        hx4d = self.stage4d(torch.cat((hx5dup, hx4), 1))
+        hx4dup = _upsample_like(hx4d, hx3)
+
+        hx3d = self.stage3d(torch.cat((hx4dup, hx3), 1))
+        hx3dup = _upsample_like(hx3d, hx2)
+
+        hx2d = self.stage2d(torch.cat((hx3dup, hx2), 1))
+        hx2dup = _upsample_like(hx2d, hx1)
+
+        hx1d = self.stage1d(torch.cat((hx2dup, hx1), 1))
+
+        # side outputs (upsample to d1 size then concat)
+        d1 = self.side1(hx1d)
+
+        d2 = self.side2(hx2d)
+        d2 = _upsample_like(d2, d1)
+
+        d3 = self.side3(hx3d)
+        d3 = _upsample_like(d3, d1)
+
+        d4 = self.side4(hx4d)
+        d4 = _upsample_like(d4, d1)
+
+        d5 = self.side5(hx5d)
+        d5 = _upsample_like(d5, d1)
+
+        d6 = self.side6(hx6)
+        d6 = _upsample_like(d6, d1)
+
+        d0 = self.outconv(torch.cat((d1, d2, d3, d4, d5, d6), 1))
+
+        # keep same convention as your U2NETM (prob maps)
+        return torch.sigmoid(d0), torch.sigmoid(d1), torch.sigmoid(d2), torch.sigmoid(d3), torch.sigmoid(d4), torch.sigmoid(d5), torch.sigmoid(d6)
+
+
+
+def load_model(path="best_u2net_medium.pth"):
     
-    model = U2NETP(in_ch=3, out_ch=1).to(device)
+    model = U2NETSM(in_ch=3, out_ch=1).to(device)
     checkpoint = torch.load(path, map_location=device)
     model.load_state_dict(checkpoint['model_state_dict'])
     model.eval()
     print("Model loaded successfully")
     return model
+
+# def load_model(path="best_u2net_small.pth"):
+    
+#     model = U2NETP(in_ch=3, out_ch=1).to(device)
+#     checkpoint = torch.load(path, map_location=device)
+#     model.load_state_dict(checkpoint['model_state_dict'])
+#     model.eval()
+#     print("Model loaded successfully")
+#     return model
