@@ -681,7 +681,7 @@ def load_model(path="best_u2net_medium.pth"):
     checkpoint = torch.load(path, map_location=device)
     model.load_state_dict(checkpoint['model_state_dict'])
     model.eval()
-    print("Model loaded successfully")
+    print("Model loaded successfully.")
     return model
 
 # def load_model(path="best_u2net_small.pth"):
